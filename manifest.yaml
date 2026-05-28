@@ -1,0 +1,71 @@
+---
+# CfCT home Region. Replace this with your AWS Control Tower home Region.
+region: us-east-1
+version: 2021-03-15
+
+resources:
+  - name: github-actions-oidc-provider-workloads
+    resource_file: templates/github-actions-oidc-provider.template
+    deploy_method: stack_set
+    deployment_targets:
+      organizational_units:
+        - Workloads:Production:hazya.dev
+        - Workloads:PreProduction:hazya.dev
+    regions:
+      - us-east-1
+
+  - name: github-actions-role-production
+    resource_file: templates/github-actions-role.template
+    deploy_method: stack_set
+    deployment_targets:
+      organizational_units:
+        - Workloads:Production:hazya.dev
+    regions:
+      - us-east-1
+    parameters:
+      - parameter_key: GitHubSubjects
+        parameter_value: repo:haZya/portfolio:environment:production
+      - parameter_key: RoleName
+        parameter_value: GitHubActionsRole
+      - parameter_key: RoleManagedPolicyArn
+        parameter_value: arn:aws:iam::aws:policy/AdministratorAccess
+      - parameter_key: PermissionsBoundaryArn
+        parameter_value: ''
+
+  - name: github-actions-role-staging
+    resource_file: templates/github-actions-role.template
+    deploy_method: stack_set
+    deployment_targets:
+      accounts:
+        # You can use the Control Tower account name or the 12-digit account ID.
+        - Staging
+    regions:
+      - us-east-1
+    parameters:
+      - parameter_key: GitHubSubjects
+        parameter_value: repo:haZya/portfolio:environment:staging
+      - parameter_key: RoleName
+        parameter_value: GitHubActionsRole
+      - parameter_key: RoleManagedPolicyArn
+        parameter_value: arn:aws:iam::aws:policy/AdministratorAccess
+      - parameter_key: PermissionsBoundaryArn
+        parameter_value: ''
+
+  - name: github-actions-role-preview
+    resource_file: templates/github-actions-role.template
+    deploy_method: stack_set
+    deployment_targets:
+      accounts:
+        # You can use the Control Tower account name or the 12-digit account ID.
+        - Preview
+    regions:
+      - us-east-1
+    parameters:
+      - parameter_key: GitHubSubjects
+        parameter_value: repo:haZya/portfolio:environment:preview
+      - parameter_key: RoleName
+        parameter_value: GitHubActionsRole
+      - parameter_key: RoleManagedPolicyArn
+        parameter_value: arn:aws:iam::aws:policy/AdministratorAccess
+      - parameter_key: PermissionsBoundaryArn
+        parameter_value: ''

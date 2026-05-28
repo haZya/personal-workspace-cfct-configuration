@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GitHub Actions role for workload accounts. Requires the GitHub Actions OIDC provider to exist in the target account.
+
+Parameters:
+  GitHubSubjects:
+    Type: CommaDelimitedList
+    Description: Comma-separated GitHub OIDC subjects allowed to assume this role, for example repo:owner/repo:environment:production.
+
+  RoleName:
+    Type: String
+    Default: GitHubActionsRole
+    Description: Name of the IAM role to create in the workload account.
+    AllowedPattern: '^[A-Za-z0-9+=,.@_-]+$'
+
+  RoleManagedPolicyArn:
+    Type: String
+    Default: ''
+    Description: Optional managed policy ARN to attach to the role. Leave empty to create the role without permissions.
+
+  PermissionsBoundaryArn:
+    Type: String
+    Default: ''
+    Description: Optional permissions boundary ARN for the role.
+
+  MaxSessionDuration:
+    Type: Number
+    Default: 3600
+    MinValue: 3600
+    MaxValue: 43200
+    Description: Maximum role session duration, in seconds.
+
+Conditions:
+  AttachManagedPolicy: !Not [!Equals [!Ref RoleManagedPolicyArn, '']]
+  ApplyPermissionsBoundary: !Not [!Equals [!Ref PermissionsBoundaryArn, '']]
+
+Resources:
+  GitHubActionsRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Ref RoleName
+      Description: Role assumed by configured GitHub Actions OIDC subjects.
+      MaxSessionDuration: !Ref MaxSessionDuration
+      ManagedPolicyArns: !If
+        - AttachManagedPolicy
+        - - !Ref RoleManagedPolicyArn
+        - !Ref AWS::NoValue
+      PermissionsBoundary: !If
+        - ApplyPermissionsBoundary
+        - !Ref PermissionsBoundaryArn
+        - !Ref AWS::NoValue
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Sid: GitHubActionsOidc
+            Effect: Allow
+            Principal:
+              Federated: !Sub 'arn:${AWS::Partition}:iam::${AWS::AccountId}:oidc-provider/token.actions.githubusercontent.com'
+            Action: sts:AssumeRoleWithWebIdentity
+            Condition:
+              StringEquals:
+                token.actions.githubusercontent.com:aud: sts.amazonaws.com
+                token.actions.githubusercontent.com:sub: !Ref GitHubSubjects
+      Tags:
+        - Key: ManagedBy
+          Value: CfCT
+
+Outputs:
+  RoleArn:
+    Description: ARN of the GitHub Actions role.
+    Value: !GetAtt GitHubActionsRole.Arn
+
+  TrustedSubjects:
+    Description: GitHub OIDC subjects trusted by this role.
+    Value: !Join [',', !Ref GitHubSubjects]

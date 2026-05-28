@@ -1,0 +1,20 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: GitHub Actions OIDC provider for workload accounts.
+
+Resources:
+  GitHubActionsOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: https://token.actions.githubusercontent.com
+      ClientIdList:
+        - sts.amazonaws.com
+      Tags:
+        - Key: ManagedBy
+          Value: CfCT
+        - Key: Purpose
+          Value: GitHubActionsOIDC
+
+Outputs:
+  OidcProviderArn:
+    Description: ARN of the GitHub Actions OIDC provider.
+    Value: !Ref GitHubActionsOidcProvider
